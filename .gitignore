@@ -4,3 +4,7 @@ __pycache__
 .jobs
 .idea
 .vscode
+api/uploads
+node_modules
+api/dist
+api/output
