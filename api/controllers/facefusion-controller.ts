@@ -48,7 +48,15 @@ export class FaceFusionController {
 					FaceFusionService.defaultOptions) as IProcessingOptions,
 			});
 
-			ctx.body = result;
+			// Set appropriate content type based on result type
+			if (body.options?.mediaTypeOutput === "video") {
+				ctx.set("Content-Type", "video/mp4");
+			} else {
+				ctx.set("Content-Type", "image/webp");
+			}
+
+			// Set the response body with the processed media
+			ctx.body = result.result;
 		} catch (error) {
 			ctx.status = 500;
 			ctx.body = {

@@ -3,6 +3,7 @@ export interface IProcessingOptions {
 	faceEnhancerModel: string;
 	faceSwapperModel: string;
 	pixelBoost: string;
+	mediaTypeOutput: "video" | "image";
 }
 
 export interface IProcessRequest {

@@ -11,6 +11,7 @@ export class FaceFusionService {
 		faceEnhancerModel: "gfpgan_1.4",
 		faceSwapperModel: "inswapper_128",
 		pixelBoost: "512x512",
+		mediaTypeOutput: "image",
 	};
 
 	public async processMedia(
@@ -28,18 +29,21 @@ export class FaceFusionService {
 				throw new Error("Missing required media files");
 			}
 
-			// const process = spawn("facefusion", [
-			// 	"--source",
-			// 	request.sourceImage,
-			// 	"--target",
-			// 	request.targetMedia,
-			// 	"--model",
-			// 	options.faceSwapperModel,
-			// 	"--output",
-			// 	"output.mp4",
-			// ]);
+			const extension =
+				options.mediaTypeOutput === "image" ? "webp" : "mp4";
+			const outputFilename = `output.${extension}`;
+			const process = spawn("facefusion", [
+				"--source",
+				request.sourceImage,
+				"--target",
+				request.targetMedia,
+				"--model",
+				options.faceSwapperModel,
+				"--output",
+				outputFilename,
+			]);
 
-			const process = spawn("ls", ["-l"]);
+			// const process = spawn("ls", ["-l"]);
 
 			return new Promise((resolve, reject) => {
 				let outputData = Buffer.from("");
