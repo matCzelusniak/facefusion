@@ -32,16 +32,27 @@ export class FaceFusionService {
 			const extension =
 				options.mediaTypeOutput === "image" ? "webp" : "mp4";
 			const outputFilename = `output.${extension}`;
-			const process = spawn("facefusion", [
-				"--source",
-				request.sourceImage,
-				"--target",
-				request.targetMedia,
-				"--model",
-				options.faceSwapperModel,
-				"--output",
-				outputFilename,
-			]);
+
+			const process = spawn(
+				"python",
+				[
+					"facefusion.py",
+					"run",
+					"--execution-providers",
+					"cuda",
+					"--source",
+					request.sourceImage,
+					"--target",
+					request.targetMedia,
+					"--model",
+					options.faceSwapperModel,
+					"--output",
+					outputFilename,
+				],
+				{
+					cwd: "/facefusion",
+				}
+			);
 
 			// const process = spawn("ls", ["-l"]);
 
