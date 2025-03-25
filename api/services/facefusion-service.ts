@@ -4,6 +4,7 @@ import {
 	IProcessingOptions,
 } from "@app/types/facefusion.types";
 const { spawn } = require("child_process");
+const fs = require("fs");
 
 export class FaceFusionService {
 	public static defaultOptions: IProcessingOptions = {
@@ -29,62 +30,94 @@ export class FaceFusionService {
 				throw new Error("Missing required media files");
 			}
 
-			const extension =
-				options.mediaTypeOutput === "image" ? "webp" : "mp4";
-			const outputFilename = `output.${extension}`;
+			// Create unique filenames
+			const timestamp = Date.now();
+			const tempSourcePath = `/tmp/input/source_${timestamp}.webp`;
+			const tempTargetPath = `/tmp/target/target_${timestamp}.webp`;
+			const outputPath = `/tmp/output/output_${timestamp}.webp`;
+
+			// Write temporary files
+			await fs.promises.writeFile(tempSourcePath, request.sourceImage);
+			await fs.promises.writeFile(tempTargetPath, request.targetMedia);
 
 			const process = spawn(
 				"python",
 				[
 					"facefusion.py",
-					"run",
+					"headless-run",
 					"--execution-providers",
 					"cuda",
 					"--source",
-					request.sourceImage,
+					tempSourcePath,
 					"--target",
-					request.targetMedia,
-					"--model",
+					tempTargetPath,
+					"--face-swapper-model",
 					options.faceSwapperModel,
-					"--output",
-					outputFilename,
+					"--output-path",
+					outputPath,
+					"--processors",
+					...options.processors,
 				],
 				{
 					cwd: "/facefusion",
 				}
 			);
 
-			// const process = spawn("ls", ["-l"]);
-
 			return new Promise((resolve, reject) => {
-				let outputData = Buffer.from("");
 				let errorData = "";
-
-				process.stdout.on("data", (data: Buffer) => {
-					console.log("stdout", data.toString());
-					outputData = Buffer.concat([outputData, data]);
-				});
 
 				process.stderr.on("data", (data: Buffer) => {
 					console.log("stderr", data.toString());
 					errorData += data.toString();
 				});
 
-				process.on("close", (code: number) => {
-					if (code === 0) {
-						resolve({
-							success: true,
-							result: outputData,
-						});
-					} else {
-						resolve({
-							success: false,
-							error: errorData || "Process failed",
-						});
+				process.on("close", async (code: number) => {
+					try {
+						if (code === 0) {
+							const outputBuffer = await fs.promises.readFile(
+								outputPath
+							);
+
+							// await fs.promises.unlink(tempSourcePath);
+							// await fs.promises.unlink(tempTargetPath);
+							// await fs.promises.unlink(outputPath);
+
+							resolve({
+								success: true,
+								result: outputBuffer,
+							});
+						} else {
+							// await fs.promises
+							// 	.unlink(tempSourcePath)
+							// 	.catch(() => {});
+							// await fs.promises
+							// 	.unlink(tempTargetPath)
+							// 	.catch(() => {});
+							// await fs.promises
+							// 	.unlink(outputPath)
+							// 	.catch(() => {});
+
+							resolve({
+								success: false,
+								error: errorData || "Process failed",
+							});
+						}
+					} catch (error) {
+						// await fs.promises
+						// 	.unlink(tempSourcePath)
+						// 	.catch(() => {});
+						// await fs.promises
+						// 	.unlink(tempTargetPath)
+						// 	.catch(() => {});
+						// await fs.promises.unlink(outputPath).catch(() => {});
+						reject(error);
 					}
 				});
 
-				process.on("error", (err: Error) => {
+				process.on("error", async (err: Error) => {
+					// await fs.promises.unlink(tempSourcePath).catch(() => {});
+					// await fs.promises.unlink(tempTargetPath).catch(() => {});
+					// await fs.promises.unlink(outputPath).catch(() => {});
 					reject(err);
 				});
 			});
