@@ -14,7 +14,10 @@ export class FaceFusionService {
 	};
 
 	public async processMedia(
-		request: IProcessRequestBody
+		request: IProcessRequestBody,
+		sourcePath: string,
+		targetPath: string,
+		outputPath: string
 	): Promise<IProcessResponse> {
 		try {
 			const options = {
@@ -28,12 +31,6 @@ export class FaceFusionService {
 				throw new Error("Missing required media files");
 			}
 
-			// Create unique filenames
-			const timestamp = Date.now();
-			const tempSourcePath = `/tmp/input/source_${timestamp}.webp`;
-			const tempTargetPath = `/tmp/target/target_${timestamp}.webp`;
-			const outputPath = `/tmp/output/output_${timestamp}.webp`;
-
 			// Write temporary files
 			// await fs.promises.writeFile(tempSourcePath, request.sourceImage);
 			// await fs.promises.writeFile(tempTargetPath, request.targetMedia);
@@ -46,9 +43,9 @@ export class FaceFusionService {
 				"--execution-providers",
 				"cuda",
 				"--source",
-				tempSourcePath,
+				sourcePath,
 				"--target",
-				tempTargetPath,
+				targetPath,
 				"--output-path",
 				outputPath,
 				...Object.entries(options).flatMap(([key, value]) => {

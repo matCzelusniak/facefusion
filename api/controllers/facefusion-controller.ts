@@ -41,15 +41,36 @@ export class FaceFusionController {
 			const targetMediaBuffer = fs.readFileSync(targetMediaFile.path);
 			const sourceImageBuffer = fs.readFileSync(sourceImageFile.path);
 
-			const result = await this.service.processMedia({
-				targetMedia: targetMediaBuffer,
-				sourceImage: sourceImageBuffer,
-				outputType: "image",
-				options: (typeof body.options === "string"
-					? JSON.parse(body.options)
-					: body.options ||
-					  FaceFusionService.defaultOptions) as TProcessingOptions,
-			});
+			// Create unique filenames
+			const timestamp = Date.now();
+
+			// Extract file extensions from original filenames
+			const sourceExt =
+				sourceImageFile.originalname.substring(
+					sourceImageFile.originalname.lastIndexOf(".") + 1
+				) || "webp";
+			const targetExt =
+				targetMediaFile.originalname.substring(
+					targetMediaFile.originalname.lastIndexOf(".") + 1
+				) || "webp";
+
+			const tempSourcePath = `/tmp/input/source_${sourceImageFile.originalname}_${timestamp}.${sourceExt}`;
+			const tempTargetPath = `/tmp/target/target_${targetMediaFile.originalname}_${timestamp}.${targetExt}`;
+			const outputPath = `/tmp/output/output_${timestamp}.${targetExt}`;
+
+			const result = await this.service.processMedia(
+				{
+					targetMedia: targetMediaBuffer,
+					sourceImage: sourceImageBuffer,
+					options: (typeof body.options === "string"
+						? JSON.parse(body.options)
+						: body.options ||
+						  FaceFusionService.defaultOptions) as TProcessingOptions,
+				},
+				tempSourcePath,
+				tempTargetPath,
+				outputPath
+			);
 
 			// Set appropriate content type based on result type
 			// if (body.outputType === "video") {

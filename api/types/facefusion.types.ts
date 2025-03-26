@@ -5,7 +5,6 @@ export type TProcessingOptions = {
 export interface IProcessRequestBody {
 	targetMedia: Buffer;
 	sourceImage: Buffer;
-	outputType: "video" | "image";
 	options: TProcessingOptions;
 }
 
