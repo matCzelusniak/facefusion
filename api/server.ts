@@ -8,7 +8,24 @@ const app = new Koa();
 const router = new Router();
 const controller = new FaceFusionController();
 
-const upload = multer({ dest: "uploads/" });
+const storage = multer.diskStorage({
+	destination: (_, file, cb) => {
+		if (file.fieldname === "sourceImage") {
+			cb(null, "/tmp/input/");
+		} else if (file.fieldname === "targetMedia") {
+			cb(null, "/tmp/target/");
+		} else {
+			cb(null, "/tmp/unknown_file_type/");
+		}
+	},
+	filename: (_, file, cb) => {
+		const timestamp = Date.now();
+		const uniqueSuffix = Math.round(Math.random() * 1e9);
+		cb(null, timestamp + "-" + uniqueSuffix + "-" + file.originalname);
+	},
+});
+
+const upload = multer({ storage });
 
 app.use(bodyParser());
 app.use(router.routes());
