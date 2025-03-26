@@ -2,12 +2,17 @@ import Koa from "koa";
 import Router from "@koa/router";
 import multer from "@koa/multer";
 import { FaceFusionController } from "@app/controllers/facefusion-controller";
+import bodyParser from "koa-bodyparser";
 
 const app = new Koa();
 const router = new Router();
 const controller = new FaceFusionController();
 
 const upload = multer({ dest: "uploads/" });
+
+app.use(bodyParser());
+app.use(router.routes());
+app.use(router.allowedMethods());
 
 router.post(
 	"/ff/process",
@@ -17,9 +22,6 @@ router.post(
 	]),
 	controller.process
 );
-
-app.use(router.routes());
-app.use(router.allowedMethods());
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

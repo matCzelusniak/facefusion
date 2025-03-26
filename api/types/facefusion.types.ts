@@ -1,15 +1,12 @@
-export interface IProcessingOptions {
-	processors: ("face_swapper" | "face_enhancer")[];
-	faceEnhancerModel: string;
-	faceSwapperModel: string;
-	pixelBoost: string;
-	mediaTypeOutput: "video" | "image";
-}
+export type TProcessingOptions = {
+	[key: string]: string | number | boolean | string[] | number[] | boolean[];
+};
 
-export interface IProcessRequest {
+export interface IProcessRequestBody {
 	targetMedia: Buffer;
 	sourceImage: Buffer;
-	options: IProcessingOptions;
+	outputType: "video" | "image";
+	options: TProcessingOptions;
 }
 
 export interface IProcessResponse {

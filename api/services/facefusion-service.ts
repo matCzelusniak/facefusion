@@ -1,22 +1,20 @@
 import {
-	IProcessRequest,
+	IProcessRequestBody,
 	IProcessResponse,
-	IProcessingOptions,
+	TProcessingOptions,
 } from "@app/types/facefusion.types";
 const { spawn } = require("child_process");
 const fs = require("fs");
 
 export class FaceFusionService {
-	public static defaultOptions: IProcessingOptions = {
+	public static defaultOptions: TProcessingOptions = {
 		processors: ["face_swapper", "face_enhancer"],
 		faceEnhancerModel: "gfpgan_1.4",
 		faceSwapperModel: "inswapper_128",
-		pixelBoost: "512x512",
-		mediaTypeOutput: "image",
 	};
 
 	public async processMedia(
-		request: IProcessRequest
+		request: IProcessRequestBody
 	): Promise<IProcessResponse> {
 		try {
 			const options = {
@@ -37,8 +35,10 @@ export class FaceFusionService {
 			const outputPath = `/tmp/output/output_${timestamp}.webp`;
 
 			// Write temporary files
-			await fs.promises.writeFile(tempSourcePath, request.sourceImage);
-			await fs.promises.writeFile(tempTargetPath, request.targetMedia);
+			// await fs.promises.writeFile(tempSourcePath, request.sourceImage);
+			// await fs.promises.writeFile(tempTargetPath, request.targetMedia);
+			console.log("all options");
+			console.log(options);
 
 			const commandArgs = [
 				"facefusion.py",
@@ -49,16 +49,19 @@ export class FaceFusionService {
 				tempSourcePath,
 				"--target",
 				tempTargetPath,
+				"--output-path",
+				outputPath,
 				...Object.entries(options).flatMap(([key, value]) => {
-					if (key === "processors") return [];
 					const paramName = `--${key.replace(
 						/[A-Z]/g,
 						(letter) => `-${letter.toLowerCase()}`
 					)}`;
-					return [paramName, value];
+
+					if (Array.isArray(value)) {
+						return [paramName, ...value];
+					}
+					return [paramName, value.toString()];
 				}),
-				"--processors",
-				...options.processors,
 			];
 
 			console.log(

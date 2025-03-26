@@ -1,11 +1,10 @@
 import { Context } from "koa";
 import { FaceFusionService } from "@app/services/facefusion-service";
-import { IProcessingOptions } from "@app/types/facefusion.types";
+import {
+	IProcessRequestBody,
+	TProcessingOptions,
+} from "@app/types/facefusion.types";
 import fs from "fs";
-
-interface RequestBody {
-	options?: Partial<IProcessingOptions>;
-}
 
 export class FaceFusionController {
 	private service: FaceFusionService;
@@ -16,7 +15,8 @@ export class FaceFusionController {
 
 	public process = async (ctx: Context) => {
 		try {
-			const body = ctx.request.body as RequestBody;
+			const body = ctx.request.body as IProcessRequestBody;
+			console.log("Debugging body:", body);
 			const files = ctx.request.files as {
 				[fieldname: string]: Express.Multer.File[];
 			};
@@ -44,16 +44,19 @@ export class FaceFusionController {
 			const result = await this.service.processMedia({
 				targetMedia: targetMediaBuffer,
 				sourceImage: sourceImageBuffer,
-				options: (body.options ||
-					FaceFusionService.defaultOptions) as IProcessingOptions,
+				outputType: "image",
+				options: (typeof body.options === "string"
+					? JSON.parse(body.options)
+					: body.options ||
+					  FaceFusionService.defaultOptions) as TProcessingOptions,
 			});
 
 			// Set appropriate content type based on result type
-			if (body.options?.mediaTypeOutput === "video") {
-				ctx.set("Content-Type", "video/mp4");
-			} else {
-				ctx.set("Content-Type", "image/webp");
-			}
+			// if (body.outputType === "video") {
+			// 	ctx.set("Content-Type", "video/mp4");
+			// } else {
+			// 	ctx.set("Content-Type", "image/webp");
+			// }
 
 			// Set the response body with the processed media
 			ctx.body = result.result;
