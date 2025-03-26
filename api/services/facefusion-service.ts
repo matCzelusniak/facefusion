@@ -51,10 +51,14 @@ export class FaceFusionService {
 					tempSourcePath,
 					"--target",
 					tempTargetPath,
-					"--face-swapper-model",
-					options.faceSwapperModel,
-					"--output-path",
-					outputPath,
+					...Object.entries(options).flatMap(([key, value]) => {
+						if (key === "processors") return [];
+						const paramName = `--${key.replace(
+							/[A-Z]/g,
+							(letter) => `-${letter.toLowerCase()}`
+						)}`;
+						return [paramName, value];
+					}),
 					"--processors",
 					...options.processors,
 				],
