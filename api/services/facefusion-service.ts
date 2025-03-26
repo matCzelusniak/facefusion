@@ -40,32 +40,35 @@ export class FaceFusionService {
 			await fs.promises.writeFile(tempSourcePath, request.sourceImage);
 			await fs.promises.writeFile(tempTargetPath, request.targetMedia);
 
-			const process = spawn(
-				"python",
-				[
-					"facefusion.py",
-					"headless-run",
-					"--execution-providers",
-					"cuda",
-					"--source",
-					tempSourcePath,
-					"--target",
-					tempTargetPath,
-					...Object.entries(options).flatMap(([key, value]) => {
-						if (key === "processors") return [];
-						const paramName = `--${key.replace(
-							/[A-Z]/g,
-							(letter) => `-${letter.toLowerCase()}`
-						)}`;
-						return [paramName, value];
-					}),
-					"--processors",
-					...options.processors,
-				],
-				{
-					cwd: "/facefusion",
-				}
+			const commandArgs = [
+				"facefusion.py",
+				"headless-run",
+				"--execution-providers",
+				"cuda",
+				"--source",
+				tempSourcePath,
+				"--target",
+				tempTargetPath,
+				...Object.entries(options).flatMap(([key, value]) => {
+					if (key === "processors") return [];
+					const paramName = `--${key.replace(
+						/[A-Z]/g,
+						(letter) => `-${letter.toLowerCase()}`
+					)}`;
+					return [paramName, value];
+				}),
+				"--processors",
+				...options.processors,
+			];
+
+			console.log(
+				"Executing command:",
+				["python", ...commandArgs].join(" ")
 			);
+
+			const process = spawn("python", commandArgs, {
+				cwd: "/facefusion",
+			});
 
 			return new Promise((resolve, reject) => {
 				let errorData = "";
