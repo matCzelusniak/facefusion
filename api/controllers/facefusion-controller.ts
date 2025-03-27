@@ -63,10 +63,26 @@ export class FaceFusionController {
 				{
 					targetMedia: targetMediaBuffer,
 					sourceImage: sourceImageBuffer,
-					options: (typeof body.options === "string"
-						? JSON.parse(body.options)
-						: body.options ||
-						  FaceFusionService.defaultOptions) as TProcessingOptions,
+					options: (() => {
+						if (typeof body.options === "string") {
+							try {
+								return JSON.parse(body.options);
+							} catch (e) {
+								console.error(
+									"Failed to parse options string:",
+									e
+								);
+								return FaceFusionService.defaultOptions;
+							}
+						} else if (
+							body.options &&
+							typeof body.options === "object"
+						) {
+							return body.options;
+						} else {
+							return FaceFusionService.defaultOptions;
+						}
+					})() as TProcessingOptions,
 					jobId: body.jobId,
 				},
 				sourceImageFile.path,
