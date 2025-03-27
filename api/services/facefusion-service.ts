@@ -3,8 +3,11 @@ import {
 	IProcessResponse,
 	TProcessingOptions,
 } from "@app/types/facefusion.types";
+import { CloudflareService } from "./cloudflare-service";
+import { NotificationService } from "./notification-service";
 const { spawn } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 
 export class FaceFusionService {
 	public static defaultOptions: TProcessingOptions = {
@@ -13,29 +16,99 @@ export class FaceFusionService {
 		faceSwapperModel: "inswapper_128",
 	};
 
+	private cloudflareService: CloudflareService;
+	private notificationService: NotificationService;
+
+	constructor() {
+		this.cloudflareService = new CloudflareService();
+		this.notificationService = new NotificationService();
+	}
+
 	public async processMedia(
 		request: IProcessRequestBody,
 		sourcePath: string,
 		targetPath: string,
 		outputPath: string
 	): Promise<IProcessResponse> {
-		try {
-			const options = {
-				...FaceFusionService.defaultOptions,
-				...request.options,
+		if (!request.jobId || request.jobId.trim() === "") {
+			return {
+				success: false,
+				error: "jobId is required and cannot be empty",
 			};
+		}
 
-			console.log(options);
+		const initialResponse: IProcessResponse = {
+			success: true,
+			jobId: request.jobId,
+		};
 
+		this.processMediaBackground(
+			request,
+			sourcePath,
+			targetPath,
+			outputPath,
+			initialResponse.jobId as string
+		).catch((err) => console.error("Background processing error:", err));
+
+		return initialResponse;
+	}
+
+	private async processMediaBackground(
+		request: IProcessRequestBody,
+		sourcePath: string,
+		targetPath: string,
+		outputPath: string,
+		jobId: string
+	): Promise<void> {
+		try {
 			if (!request.targetMedia || !request.sourceImage) {
 				throw new Error("Missing required media files");
 			}
 
-			// Write temporary files
-			// await fs.promises.writeFile(tempSourcePath, request.sourceImage);
-			// await fs.promises.writeFile(tempTargetPath, request.targetMedia);
+			// Upload target file to Cloudflare for temporary storage
+			// const sourceBuffer = await fs.promises.readFile(sourcePath);
+			// const sourceFileType = path.extname(sourcePath).toLowerCase();
+			// const isSourceVideo = [".mp4", ".mov", ".webm", ".avi"].includes(
+			// 	sourceFileType
+			// );
+			// const sourceUploadResult = isSourceVideo
+			// 	? await this.cloudflareService.uploadVideoToCloudflare(
+			// 			sourceBuffer,
+			// 			`source_${jobId}`,
+			// 			{ fileType: sourceFileType }
+			// 	  )
+			// 	: await this.cloudflareService.uploadImageToCloudflare(
+			// 			sourceBuffer,
+			// 			`source_${jobId}`
+			// 	  );
+
+			// console.log("source upload result", sourceUploadResult);
+
+			// const targetBuffer = await fs.promises.readFile(targetPath);
+			// const targetFileType = path.extname(targetPath).toLowerCase();
+			// const isTargetVideo = [".mp4", ".mov", ".webm", ".avi"].includes(
+			// 	targetFileType
+			// );
+
+			// // Commented out for now
+			// const targetUploadResult = isTargetVideo
+			// 	? await this.cloudflareService.uploadVideoToCloudflare(
+			// 			targetBuffer,
+			// 			`target_${jobId}`,
+			// 			{
+			// 				fileType: targetFileType,
+			// 				maxDurationSeconds: 21600,
+			// 			}
+			// 	  )
+			// 	: await this.cloudflareService.uploadImageToCloudflare(
+			// 			targetBuffer,
+			// 			`target_${jobId}`
+			// 	  );
+
+			//console.log("target upload result", targetUploadResult);
+
 			console.log("all options");
-			console.log(options);
+			console.log(request.options);
 
 			const commandArgs = [
 				"facefusion.py",
@@ -48,7 +121,7 @@ export class FaceFusionService {
 				targetPath,
 				"--output-path",
 				outputPath,
-				...Object.entries(options).flatMap(([key, value]) => {
+				...Object.entries(request.options).flatMap(([key, value]) => {
 					const paramName = `--${key.replace(
 						/[A-Z]/g,
 						(letter) => `-${letter.toLowerCase()}`
@@ -85,57 +158,89 @@ export class FaceFusionService {
 								outputPath
 							);
 
-							// await fs.promises.unlink(tempSourcePath);
-							// await fs.promises.unlink(tempTargetPath);
-							// await fs.promises.unlink(outputPath);
+							const fileType = path
+								.extname(outputPath)
+								.toLowerCase();
+							const isVideo = [
+								".mp4",
+								".mov",
+								".webm",
+								".avi",
+							].includes(fileType);
 
-							resolve({
+							let uploadResult;
+							if (isVideo) {
+								uploadResult =
+									await this.cloudflareService.uploadVideoToCloudflare(
+										outputBuffer,
+										jobId,
+										fileType
+									);
+							} else {
+								uploadResult =
+									await this.cloudflareService.uploadImageToCloudflare(
+										outputBuffer,
+										jobId
+									);
+							}
+
+							await this.notificationService.sendNotification({
+								jobId,
 								success: true,
-								result: outputBuffer,
+								mediaType: isVideo ? "video" : "image",
+								cloudflareId: uploadResult.id,
+								cloudflareUrl: uploadResult.url,
 							});
-						} else {
-							// await fs.promises
-							// 	.unlink(tempSourcePath)
-							// 	.catch(() => {});
-							// await fs.promises
-							// 	.unlink(tempTargetPath)
-							// 	.catch(() => {});
-							// await fs.promises
-							// 	.unlink(outputPath)
-							// 	.catch(() => {});
 
-							resolve({
+							resolve();
+						} else {
+							console.log(
+								"Error in processMediaBackground",
+								errorData
+							);
+							await this.notificationService.sendNotification({
+								jobId,
 								success: false,
 								error: errorData || "Process failed",
 							});
+
+							reject(new Error(errorData || "Process failed"));
 						}
 					} catch (error) {
-						// await fs.promises
-						// 	.unlink(tempSourcePath)
-						// 	.catch(() => {});
-						// await fs.promises
-						// 	.unlink(tempTargetPath)
-						// 	.catch(() => {});
-						// await fs.promises.unlink(outputPath).catch(() => {});
+						console.log("Error in processMediaBackground", error);
+						await this.notificationService.sendNotification({
+							jobId,
+							success: false,
+							error:
+								error instanceof Error
+									? error.message
+									: "Unknown error",
+						});
+
 						reject(error);
 					}
 				});
 
 				process.on("error", async (err: Error) => {
-					// await fs.promises.unlink(tempSourcePath).catch(() => {});
-					// await fs.promises.unlink(tempTargetPath).catch(() => {});
-					// await fs.promises.unlink(outputPath).catch(() => {});
+					console.log("Error in processMediaBackground", err);
+					await this.notificationService.sendNotification({
+						jobId,
+						success: false,
+						error: err.message,
+					});
+
 					reject(err);
 				});
 			});
 		} catch (error) {
-			return {
+			console.log("Error in processMediaBackground", error);
+			await this.notificationService.sendNotification({
+				jobId,
 				success: false,
-				error:
-					error instanceof Error
-						? error.message
-						: "Unknown error occurred",
-			};
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
+
+			throw error;
 		}
 	}
 }

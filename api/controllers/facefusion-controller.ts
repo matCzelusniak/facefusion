@@ -29,6 +29,15 @@ export class FaceFusionController {
 				return;
 			}
 
+			if (!body.jobId || body.jobId.trim() === "") {
+				ctx.status = 400;
+				ctx.body = {
+					success: false,
+					error: "jobId is required and cannot be empty",
+				};
+				return;
+			}
+
 			const targetMediaFile = files.targetMedia?.[0];
 			const sourceImageFile = files.sourceImage?.[0];
 
@@ -41,10 +50,8 @@ export class FaceFusionController {
 			const targetMediaBuffer = fs.readFileSync(targetMediaFile.path);
 			const sourceImageBuffer = fs.readFileSync(sourceImageFile.path);
 
-			// Create unique filenames
 			const timestamp = Date.now();
 
-			// Extract file extensions from original filenames
 			const targetExt =
 				targetMediaFile.originalname.substring(
 					targetMediaFile.originalname.lastIndexOf(".") + 1
@@ -60,21 +67,19 @@ export class FaceFusionController {
 						? JSON.parse(body.options)
 						: body.options ||
 						  FaceFusionService.defaultOptions) as TProcessingOptions,
+					jobId: body.jobId,
 				},
 				sourceImageFile.path,
 				targetMediaFile.path,
 				outputPath
 			);
 
-			// Set appropriate content type based on result type
-			// if (body.outputType === "video") {
-			// 	ctx.set("Content-Type", "video/mp4");
-			// } else {
-			// 	ctx.set("Content-Type", "image/webp");
-			// }
-
-			// Set the response body with the processed media
-			ctx.body = result.result;
+			ctx.status = 200;
+			ctx.body = {
+				success: true,
+				jobId: result.jobId,
+				message: "Processing started",
+			};
 		} catch (error) {
 			ctx.status = 500;
 			ctx.body = {
