@@ -17,7 +17,7 @@ export class NotificationService {
 	public async sendNotification(data: INotificationData): Promise<void> {
 		try {
 			const response = await fetch(this.CALLBACK_URL, {
-				method: "POST",
+				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",
 				},
@@ -32,46 +32,6 @@ export class NotificationService {
 			}
 		} catch (error) {
 			console.error("Failed to send notification:", error);
-		}
-	}
-
-	public async sendStatusUpdate(
-		endpoint: string,
-		jobId: string,
-		status: "SUCCESS" | "FAIL"
-	): Promise<void> {
-		if (!endpoint) {
-			console.log("No endpoint configured, skipping status update");
-			return;
-		}
-
-		const payload: NotificationPayload = {
-			jobId,
-			status,
-		};
-
-		console.log("sendStatusUpdate::payload", payload);
-
-		try {
-			const response = await fetch(endpoint, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(payload),
-			});
-
-			if (!response.ok) {
-				console.log(response);
-				console.error(
-					`Status update failed with status ${response.status}`
-				);
-			} else {
-				console.log(`Status update for job ${jobId} sent successfully`);
-			}
-		} catch (error) {
-			console.log(error);
-			console.error("Failed to send status update:", error);
 		}
 	}
 }
