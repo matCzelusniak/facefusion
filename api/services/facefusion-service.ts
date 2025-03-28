@@ -105,7 +105,7 @@ export class FaceFusionService {
 			// 			`target_${jobId}`
 			// 	  );
 
-			//console.log("target upload result", targetUploadResult);
+			// console.log("target upload result", targetUploadResult);
 
 			console.log("all options");
 			console.log(request.options);
@@ -174,7 +174,10 @@ export class FaceFusionService {
 									await this.cloudflareService.uploadVideoToCloudflare(
 										outputBuffer,
 										jobId,
-										fileType
+										{
+											fileType: fileType,
+											maxDurationSeconds: 21600,
+										}
 									);
 							} else {
 								uploadResult =
