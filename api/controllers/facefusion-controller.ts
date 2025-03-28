@@ -22,6 +22,7 @@ export class FaceFusionController {
 			};
 
 			console.log("Debugging files object:", files);
+			const sanitizedJobId = body.jobId.replace(/['"`]/g, "");
 
 			if (!files) {
 				ctx.status = 400;
@@ -83,7 +84,7 @@ export class FaceFusionController {
 							return FaceFusionService.defaultOptions;
 						}
 					})() as TProcessingOptions,
-					jobId: body.jobId,
+					jobId: sanitizedJobId,
 				},
 				sourceImageFile.path,
 				targetMediaFile.path,

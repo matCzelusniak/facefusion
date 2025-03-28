@@ -6,9 +6,7 @@ import {
 import { CloudflareService } from "./cloudflare-service";
 import { NotificationService } from "./notification-service";
 const { spawn } = require("child_process");
-const fs = require("fs");
 const path = require("path");
-
 export class FaceFusionService {
 	public static defaultOptions: TProcessingOptions = {
 		processors: ["face_swapper", "face_enhancer"],
@@ -46,8 +44,7 @@ export class FaceFusionService {
 			request,
 			sourcePath,
 			targetPath,
-			outputPath,
-			initialResponse.jobId as string
+			outputPath
 		).catch((err) => console.error("Background processing error:", err));
 
 		return initialResponse;
@@ -57,9 +54,9 @@ export class FaceFusionService {
 		request: IProcessRequestBody,
 		sourcePath: string,
 		targetPath: string,
-		outputPath: string,
-		jobId: string
+		outputPath: string
 	): Promise<void> {
+		const jobId = request.jobId;
 		try {
 			if (!request.targetMedia || !request.sourceImage) {
 				throw new Error("Missing required media files");
@@ -73,42 +70,50 @@ export class FaceFusionService {
 			// );
 			// const sourceUploadResult = isSourceVideo
 			// 	? await this.cloudflareService.uploadVideoToCloudflare(
-			// 			sourceBuffer,
-			// 			`source_${jobId}`,
+			// 			sourcePath,
+			// 			`source_${jobId.toString()}`,
 			// 			{ fileType: sourceFileType }
 			// 	  )
 			// 	: await this.cloudflareService.uploadImageToCloudflare(
-			// 			sourceBuffer,
+			// 			sourcePath,
 			// 			`source_${jobId}`
 			// 	  );
 
 			// console.log("source upload result", sourceUploadResult);
 
-			// const targetBuffer = await fs.promises.readFile(targetPath);
+			//const targetBuffer = await fs.promises.readFile(targetPath);
 			// const targetFileType = path.extname(targetPath).toLowerCase();
 			// const isTargetVideo = [".mp4", ".mov", ".webm", ".avi"].includes(
 			// 	targetFileType
 			// );
 
-			// // Commented out for now
+			// //Commented out for now
 			// const targetUploadResult = isTargetVideo
 			// 	? await this.cloudflareService.uploadVideoToCloudflare(
-			// 			targetBuffer,
+			// 			targetPath,
 			// 			`target_${jobId}`,
 			// 			{
 			// 				fileType: targetFileType,
-			// 				maxDurationSeconds: 21600,
 			// 			}
 			// 	  )
 			// 	: await this.cloudflareService.uploadImageToCloudflare(
-			// 			targetBuffer,
+			// 			targetPath,
 			// 			`target_${jobId}`
 			// 	  );
 
 			// console.log("target upload result", targetUploadResult);
+			// console.log("jobId", jobId);
 
-			console.log("all options");
-			console.log(request.options);
+			// await this.notificationService.sendNotification({
+			// 	jobId,
+			// 	success: true,
+			// 	mediaType: isTargetVideo ? "video" : "image",
+			// 	cloudflareId: targetUploadResult.id,
+			// 	cloudflareUrl: targetUploadResult.url,
+			// });
+
+			// console.log("all options");
+			// console.log(request.options);
 
 			const commandArgs = [
 				"facefusion.py",
@@ -154,10 +159,6 @@ export class FaceFusionService {
 				process.on("close", async (code: number) => {
 					try {
 						if (code === 0) {
-							const outputBuffer = await fs.promises.readFile(
-								outputPath
-							);
-
 							const fileType = path
 								.extname(outputPath)
 								.toLowerCase();
@@ -172,17 +173,16 @@ export class FaceFusionService {
 							if (isVideo) {
 								uploadResult =
 									await this.cloudflareService.uploadVideoToCloudflare(
-										outputBuffer,
+										outputPath,
 										jobId,
 										{
 											fileType: fileType,
-											maxDurationSeconds: 21600,
 										}
 									);
 							} else {
 								uploadResult =
 									await this.cloudflareService.uploadImageToCloudflare(
-										outputBuffer,
+										outputPath,
 										jobId
 									);
 							}

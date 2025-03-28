@@ -25,6 +25,7 @@ export class NotificationService {
 			});
 
 			if (!response.ok) {
+				console.log(response);
 				console.error(
 					`Notification failed with status ${response.status}`
 				);
@@ -49,6 +50,8 @@ export class NotificationService {
 			status,
 		};
 
+		console.log("sendStatusUpdate::payload", payload);
+
 		try {
 			const response = await fetch(endpoint, {
 				method: "PATCH",
@@ -59,6 +62,7 @@ export class NotificationService {
 			});
 
 			if (!response.ok) {
+				console.log(response);
 				console.error(
 					`Status update failed with status ${response.status}`
 				);
@@ -66,6 +70,7 @@ export class NotificationService {
 				console.log(`Status update for job ${jobId} sent successfully`);
 			}
 		} catch (error) {
+			console.log(error);
 			console.error("Failed to send status update:", error);
 		}
 	}
